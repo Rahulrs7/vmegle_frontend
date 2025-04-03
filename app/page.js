@@ -5,15 +5,13 @@ import { io } from "socket.io-client";
 import EmojiPicker from "emoji-picker-react";
 import styles from "./page.module.css";
 
-// Your component code remains the same...
-
-
 const ChatApp = () => {
   const [socket, setSocket] = useState(null);
   const [roomId, setRoomId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
   const [connected, setConnected] = useState(false);
+  const [strangerDisconnected, setStrangerDisconnected] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef(null);
   const emojiPickerRef = useRef(null);
@@ -44,6 +42,7 @@ const ChatApp = () => {
     setSocket(newSocket);
     setMessages([{ text: "Connecting you to a user...", sender: "system" }]);
     setConnected(true);
+    setStrangerDisconnected(false);
 
     newSocket.on("connect", () => {
       newSocket.once("paired", (data) => {
@@ -57,7 +56,7 @@ const ChatApp = () => {
 
       newSocket.on("strangerDisconnected", () => {
         setMessages((prev) => [...prev, { text: "Stranger disconnected.", sender: "system" }]);
-        endChat();
+        setStrangerDisconnected(true);
       });
     });
   };
@@ -92,36 +91,41 @@ const ChatApp = () => {
         </div>
       ) : (
         <div className={styles.chatRoom}>
-  <div className={styles.messages}>
-    {messages.map((msg, index) => (
-      <p key={index} className={`${styles.message} ${styles[msg.sender]}`}>{msg.text}</p>
-    ))}
-    <div ref={messagesEndRef} />
-  </div>
+          <div className={styles.messages}>
+            {messages.map((msg, index) => (
+              <p key={index} className={`${styles.message} ${styles[msg.sender]}`}>{msg.text}</p>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
 
-  {/* Emoji Picker - Move it outside inputContainer */}
-  {showEmojiPicker && (
-    <div ref={emojiPickerRef} className={styles.emojiPicker}>
-      <EmojiPicker onEmojiClick={handleEmojiClick} />
-    </div>
-  )}
+          {showEmojiPicker && (
+            <div ref={emojiPickerRef} className={styles.emojiPicker}>
+              <EmojiPicker onEmojiClick={handleEmojiClick} />
+            </div>
+          )}
 
-  <div className={styles.inputContainer}>
-    <input
-      type="text"
-      value={message}
-      onChange={(e) => setMessage(e.target.value)}
-      onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-      placeholder="Type your message..."
-    />
-    <button className={styles.emojiBtn} onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
-      😀
-    </button>
-    <button className={styles.sendbtn} onClick={sendMessage}>Send</button>
-    <button className={styles.exitbtn} onClick={endChat}>Exit Chat</button>
-  </div>
-</div>
-
+          {!strangerDisconnected ? (
+            <div className={styles.inputContainer}>
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                placeholder="Type your message..."
+              />
+              <button className={styles.emojiBtn} onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
+                😀
+              </button>
+              <button className={styles.sendbtn} onClick={sendMessage}>Send</button>
+              <button className={styles.exitbtn} onClick={endChat}>Exit Chat</button>
+            </div>
+          ) : (
+            <div className={styles.disconnectedContainer}>
+              <button onClick={startNewChat} className={styles.newChatBtn}>New Chat</button>
+              <button onClick={() => setConnected(false)} className={styles.homeBtn}>Home</button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
